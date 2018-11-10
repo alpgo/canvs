@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "module": "amd",
+        "target": "es5",
+        "noImplicitAny": false,
+        "removeComments": false,
+        "preserveConstEnums": true,
+        "outFile": "build/game.js",
+        "watch": true,
+        "sourceMap": true
+    },
+    "include": [
+        "engine/**/*",
+        "game/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "build"
+    ]
+}

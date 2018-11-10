@@ -6,18 +6,29 @@ module eg {
 
     export var context: CanvasRenderingContext2D;
 
+    export var stage: DisplayObjectContainer;
+
+    let $stage: DisplayObjectContainer;
+    Object.defineProperty(eg, "stage", {
+        get: function () {
+            return $stage;
+        },
+        set: function () {
+            console.error("cannot assign to eg.stage");
+        }
+    });
+
     const callbackList = [];
 
     // 游戏初始化
-    export function gameInit() {
-        // init canvas
+    export function init() {
+        $stage = new DisplayObjectContainer();
+        
         var canvas = document.getElementById('canvas') as HTMLCanvasElement;
         context = canvas.getContext('2d');
-        // start game
+        
         startTicker();
     }
-
-    gameInit();
 
     // <F:EgretWeb.ts><M:startTicker>
     // 游戏循环心跳

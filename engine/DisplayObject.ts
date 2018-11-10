@@ -4,8 +4,6 @@
 
 module eg {
 
-    var objects: DisplayObject[] = [];
-
     export function getStageWidth(): number {
         return context.canvas.width;
     }
@@ -22,35 +20,10 @@ module eg {
         context.canvas.height = value;
     }
 
-    export function addObject(obj: DisplayObject) {
-        objects.push(obj);
-    }
-
-    export function removeObject(obj: DisplayObject) {
-
-    }
-
-    export function render() {
-        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-        objects.forEach(function (obj) {
-            context.save();
-            var m = obj.getMatrix();
-            context.transform(m.a, m.b, m.c, m.d, m.tx, m.ty);
-            context.drawImage(obj.image, -obj.anchorOffsetX, -obj.anchorOffsetY);
-            context.restore();
-        });
-    }
-
     export class DisplayObject {
 
-        constructor(url: string) {
-            this.url = url;
-        }
+        constructor() {
 
-        private url: string;
-
-        public get image() {
-            return getRes(this.url);
         }
 
         private $matrix: Matrix = new Matrix();
@@ -71,12 +44,29 @@ module eg {
             return this.$matrix;
         }
 
+        /**
+         * 获得这个显示对象以及它所有父级对象的连接矩阵。
+         */
+        public $getConcatenatedMatrix(): Matrix {
+            let matrix = new Matrix();
+            if (this.parent) {
+                let p = this.parent.$getConcatenatedMatrix();
+                let s = this.getMatrix();
+                return matrix.$append(p).$append(s);
+            } else {
+                return this.getMatrix();
+            }
+        }
+
+        public render() { }
+
+
         public get width(): number {
-            return this.image ? this.image.width : 0;
+            return 0;
         }
 
         public get height(): number {
-            return this.image ? this.image.height : 0;
+            return 0;
         }
 
         private $anchorOffsetX: number = 0;
@@ -152,6 +142,16 @@ module eg {
 
         public set rotation(value: number) {
             this.$rotation = value;
+        }
+
+        private $parent: DisplayObjectContainer;
+
+        public get parent(): DisplayObjectContainer {
+            return this.$parent;
+        }
+
+        public set parent(p: DisplayObjectContainer) {
+            this.$parent = p;
         }
     }
 }

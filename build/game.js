@@ -46,25 +46,21 @@ var eg;
  */
 var eg;
 (function (eg) {
-    function getStageWidth() {
-        return eg.context.canvas.width;
-    }
-    eg.getStageWidth = getStageWidth;
-    function getStageHeight() {
-        return eg.context.canvas.height;
-    }
-    eg.getStageHeight = getStageHeight;
     function setStageWidth(value) {
         eg.context.canvas.width = value;
+        eg.stage.width = value;
     }
     eg.setStageWidth = setStageWidth;
     function setStageHeight(value) {
         eg.context.canvas.height = value;
+        eg.stage.height = value;
     }
     eg.setStageHeight = setStageHeight;
     var DisplayObject = (function () {
         function DisplayObject() {
             this.$matrix = new eg.Matrix();
+            this.$width = 0;
+            this.$height = 0;
             this.$anchorOffsetX = 0;
             this.$anchorOffsetY = 0;
             this.$x = 0;
@@ -102,14 +98,20 @@ var eg;
         DisplayObject.prototype.render = function () { };
         Object.defineProperty(DisplayObject.prototype, "width", {
             get: function () {
-                return 0;
+                return this.$width;
+            },
+            set: function (value) {
+                this.$width = value;
             },
             enumerable: true,
             configurable: true
         });
         Object.defineProperty(DisplayObject.prototype, "height", {
             get: function () {
-                return 0;
+                return this.$height;
+            },
+            set: function (value) {
+                this.$height = value;
             },
             enumerable: true,
             configurable: true
@@ -367,6 +369,67 @@ var eg;
     }
     eg.loadImageArray = loadImageArray;
 })(eg || (eg = {}));
+var eg;
+(function (eg) {
+    var Shape = (function (_super) {
+        __extends(Shape, _super);
+        function Shape() {
+            var _this = _super.call(this) || this;
+            _this.data = [];
+            return _this;
+        }
+        Shape.prototype.fillRect = function (color, w, h) {
+            this.data.push(["fill", color, w, h]);
+        };
+        Shape.prototype.strokeRect = function (color, w, h) {
+            this.data.push(["stroke", color, w, h]);
+        };
+        Shape.prototype.circle = function (color, x, y, radius) {
+            this.data.push(["circle", color, x, y, radius]);
+        };
+        Shape.prototype.render = function () {
+            var _this = this;
+            eg.context.save();
+            eg.context.transform(1, 0, 0, 1, -this.anchorOffsetX, -this.anchorOffsetY);
+            this.data.forEach(function (arr) {
+                var type = arr[0];
+                if (type == "fill") {
+                    _this.$fillRect(arr[1], arr[2], arr[3]);
+                }
+                else if (type == "stroke") {
+                    _this.$strokeRect(arr[1], arr[2], arr[3]);
+                }
+                else if (type == "circle") {
+                    _this.$circle(arr[1], arr[2], arr[3], arr[4]);
+                }
+                else { }
+            });
+            eg.context.restore();
+        };
+        Shape.prototype.$fillRect = function (color, w, h) {
+            eg.context.save();
+            eg.context.fillStyle = color;
+            eg.context.fillRect(0, 0, w, h);
+            eg.context.restore();
+        };
+        Shape.prototype.$strokeRect = function (color, w, h) {
+            eg.context.save();
+            eg.context.strokeStyle = color;
+            eg.context.strokeRect(0, 0, w, h);
+            eg.context.restore();
+        };
+        Shape.prototype.$circle = function (color, cx, cy, radius) {
+            eg.context.save();
+            eg.context.beginPath();
+            eg.context.strokeStyle = color;
+            eg.context.arc(cx, cy, radius, 0, Math.PI * 2, false);
+            eg.context.stroke();
+            eg.context.restore();
+        };
+        return Shape;
+    }(eg.DisplayObject));
+    eg.Shape = Shape;
+})(eg || (eg = {}));
 /**
  * 游戏循环时间控制
  */
@@ -430,24 +493,28 @@ var game;
     function main() {
         eg.setStageWidth(600);
         eg.setStageHeight(400);
-        var button0 = new eg.DisplayObjectContainer();
-        eg.stage.addChild(button0);
-        var button1 = new eg.Bitmap("assets/button.png");
-        button0.addChild(button1);
-        button0.x = eg.getStageWidth() - button1.width >> 1;
-        button0.y = eg.getStageHeight() - button1.height >> 1;
+        var container = new eg.DisplayObjectContainer();
+        container.x = eg.stage.width / 2;
+        container.y = eg.stage.height / 2;
+        eg.stage.addChild(container);
+        var rect = new eg.Shape();
+        rect.fillRect("#3366CC", 100, 100);
+        rect.strokeRect("#FF6600", 100, 100);
+        rect.circle("#FF00FF", 50, 50, 50 * Math.sqrt(2));
+        rect.anchorOffsetX = 100 / 2;
+        rect.anchorOffsetY = 100 / 2;
+        container.addChild(rect);
+        eg.frameLoop(function () {
+            container.rotation += 0.5;
+        });
         var go = new eg.Bitmap("assets/go.png");
-        button0.addChild(go);
-        go.x = button1.width / 2;
-        go.y = 60;
-        go.scale = 1;
         go.anchorOffsetX = go.width / 2;
         go.anchorOffsetY = go.height / 2;
+        container.addChild(go);
         eg.frameLoop(function () {
-            go.rotation += 1;
+            go.rotation += -3;
         });
-        eg.moveLeftRight(button0, 0, 400);
-        eg.scaleLowHigh(button0, 0.8, 1.2);
+        eg.moveLeftRight(container, 200, 400);
     }
 })(game || (game = {}));
 //# sourceMappingURL=game.js.map

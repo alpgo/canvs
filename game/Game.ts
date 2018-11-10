@@ -19,28 +19,31 @@ module game {
         eg.setStageWidth(600);
         eg.setStageHeight(400);
 
-        var button0 = new eg.DisplayObjectContainer();
-        eg.stage.addChild(button0);
+        var container = new eg.DisplayObjectContainer();
+        container.x = eg.stage.width / 2;
+        container.y = eg.stage.height / 2;
+        eg.stage.addChild(container);
 
-        var button1 = new eg.Bitmap("assets/button.png");
-        button0.addChild(button1);
-
-        button0.x = eg.getStageWidth() - button1.width >> 1;
-        button0.y = eg.getStageHeight() - button1.height >> 1;
+        var rect = new eg.Shape();
+        rect.fillRect("#3366CC", 100, 100);
+        rect.strokeRect("#FF6600", 100, 100);
+        rect.circle("#FF00FF", 50, 50, 50 * Math.sqrt(2));
+        rect.anchorOffsetX = 100 / 2;
+        rect.anchorOffsetY = 100 / 2;
+        container.addChild(rect);
+        eg.frameLoop(function () {
+            container.rotation += 0.5;
+        });
 
         var go = new eg.Bitmap("assets/go.png");
-        button0.addChild(go);
-        go.x = button1.width / 2;
-        go.y = 60;
-
-        go.scale = 1;
         go.anchorOffsetX = go.width / 2;
         go.anchorOffsetY = go.height / 2;
+        container.addChild(go);
         eg.frameLoop(function () {
-            go.rotation += 1;
+            go.rotation += -3;
         });
-        eg.moveLeftRight(button0, 0, 400);
-        eg.scaleLowHigh(button0, 0.8, 1.2);
+
+        eg.moveLeftRight(container, 200, 400);
     }
 
 }

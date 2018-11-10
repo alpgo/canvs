@@ -4,20 +4,14 @@
 
 module eg {
 
-    export function getStageWidth(): number {
-        return context.canvas.width;
-    }
-
-    export function getStageHeight(): number {
-        return context.canvas.height;
-    }
-
     export function setStageWidth(value: number) {
         context.canvas.width = value;
+        stage.width = value;
     }
 
     export function setStageHeight(value: number) {
         context.canvas.height = value;
+        stage.height = value;
     }
 
     export class DisplayObject {
@@ -60,13 +54,24 @@ module eg {
 
         public render() { }
 
+        private $width: number = 0;
 
         public get width(): number {
-            return 0;
+            return this.$width;
         }
 
+        public set width(value: number) {
+            this.$width = value;
+        }
+
+        private $height: number = 0;
+
         public get height(): number {
-            return 0;
+            return this.$height;
+        }
+
+        public set height(value: number) {
+            this.$height = value;
         }
 
         private $anchorOffsetX: number = 0;

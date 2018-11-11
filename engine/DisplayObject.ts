@@ -52,8 +52,6 @@ module eg {
             }
         }
 
-        public render() { }
-
         private $width: number = 0;
 
         public get width(): number {
@@ -127,7 +125,7 @@ module eg {
         private $scaleY: number = 1;
 
         public get scaleY(): number {
-            return this.scaleY;
+            return this.$scaleY;
         }
 
         public set scaleY(value: number) {
@@ -158,5 +156,29 @@ module eg {
         public set parent(p: DisplayObjectContainer) {
             this.$parent = p;
         }
+
+        public $getInvertedConcatenatedMatrix() {
+            var m = new Matrix();
+            this.$getConcatenatedMatrix().$invertInto(m);
+            return m;
+        }
+
+        public hitTest(stageX: number, stageY: number): DisplayObject {
+            var m = this.$getInvertedConcatenatedMatrix();
+            var localX = m.a * stageX + m.c * stageY + m.tx;
+            var localY = m.b * stageX + m.d * stageY + m.ty;
+            $tempRect = this.$measureContentBounds();
+            if ($tempRect.contains(localX, localY)) {
+                return this;
+            }
+            return null;
+        }
+
+        /**
+         * 以下需要子类实现
+         */
+        public render() { }
+
+        public $measureContentBounds(): any { }
     }
 }

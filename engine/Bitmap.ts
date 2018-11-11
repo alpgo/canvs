@@ -21,8 +21,15 @@ module eg {
             return this.image.height;
         }
 
+        @override
         public render() {
             context.drawImage(this.image, -this.anchorOffsetX, -this.anchorOffsetY);
+        }
+
+        @override
+        public $measureContentBounds(): any {
+            return $tempRect.setTo(-this.anchorOffsetX * this.scaleX, -this.anchorOffsetY * this.scaleY,
+                this.width * this.scaleX, this.height * this.scaleY);
         }
     }
 }

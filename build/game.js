@@ -8,6 +8,12 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var eg;
 (function (eg) {
     // 左右循环运动
@@ -95,7 +101,6 @@ var eg;
                 return this.getMatrix();
             }
         };
-        DisplayObject.prototype.render = function () { };
         Object.defineProperty(DisplayObject.prototype, "width", {
             get: function () {
                 return this.$width;
@@ -168,7 +173,7 @@ var eg;
         });
         Object.defineProperty(DisplayObject.prototype, "scaleY", {
             get: function () {
-                return this.scaleY;
+                return this.$scaleY;
             },
             set: function (value) {
                 this.$scaleY = value;
@@ -204,6 +209,26 @@ var eg;
             enumerable: true,
             configurable: true
         });
+        DisplayObject.prototype.$getInvertedConcatenatedMatrix = function () {
+            var m = new eg.Matrix();
+            this.$getConcatenatedMatrix().$invertInto(m);
+            return m;
+        };
+        DisplayObject.prototype.hitTest = function (stageX, stageY) {
+            var m = this.$getInvertedConcatenatedMatrix();
+            var localX = m.a * stageX + m.c * stageY + m.tx;
+            var localY = m.b * stageX + m.d * stageY + m.ty;
+            eg.$tempRect = this.$measureContentBounds();
+            if (eg.$tempRect.contains(localX, localY)) {
+                return this;
+            }
+            return null;
+        };
+        /**
+         * 以下需要子类实现
+         */
+        DisplayObject.prototype.render = function () { };
+        DisplayObject.prototype.$measureContentBounds = function () { };
         return DisplayObject;
     }());
     eg.DisplayObject = DisplayObject;
@@ -239,6 +264,15 @@ var eg;
         Bitmap.prototype.render = function () {
             eg.context.drawImage(this.image, -this.anchorOffsetX, -this.anchorOffsetY);
         };
+        Bitmap.prototype.$measureContentBounds = function () {
+            return eg.$tempRect.setTo(-this.anchorOffsetX * this.scaleX, -this.anchorOffsetY * this.scaleY, this.width * this.scaleX, this.height * this.scaleY);
+        };
+        __decorate([
+            eg.override
+        ], Bitmap.prototype, "render", null);
+        __decorate([
+            eg.override
+        ], Bitmap.prototype, "$measureContentBounds", null);
         return Bitmap;
     }(eg.DisplayObject));
     eg.Bitmap = Bitmap;
@@ -256,6 +290,17 @@ var eg;
         DisplayObjectContainer.prototype.addChild = function (child) {
             child.parent = this;
             this.$children.push(child);
+        };
+        DisplayObjectContainer.prototype.hitTest = function (stageX, stageY) {
+            var children = this.$children;
+            for (var i = children.length - 1; i >= 0; i--) {
+                var child = children[i];
+                var target = child.hitTest(stageX, stageY);
+                if (target) {
+                    return target;
+                }
+            }
+            return null;
         };
         return DisplayObjectContainer;
     }(eg.DisplayObject));
@@ -296,8 +341,52 @@ var eg;
             this.ty = tx * b1 + ty * d1 + this.ty;
             return this;
         };
+        // return this * o
         Matrix.prototype.$append = function (o) {
             return this.append(o.a, o.b, o.c, o.d, o.tx, o.ty);
+        };
+        /**
+         * 逆矩阵
+         */
+        Matrix.prototype.invert = function () {
+            this.$invertInto(this);
+        };
+        Matrix.prototype.$invertInto = function (target) {
+            var a = this.a;
+            var b = this.b;
+            var c = this.c;
+            var d = this.d;
+            var tx = this.tx;
+            var ty = this.ty;
+            if (b == 0 && c == 0) {
+                target.b = target.c = 0;
+                if (a == 0 || d == 0) {
+                    target.a = target.d = target.tx = target.ty = 0;
+                }
+                else {
+                    a = target.a = 1 / a;
+                    d = target.d = 1 / d;
+                    target.tx = -a * tx;
+                    target.ty = -d * ty;
+                }
+                return;
+            }
+            var determinant = a * d - b * c;
+            if (determinant == 0) {
+                target.identity();
+                return;
+            }
+            determinant = 1 / determinant;
+            var k = target.a = d * determinant;
+            b = target.b = -b * determinant;
+            c = target.c = -c * determinant;
+            d = target.d = a * determinant;
+            target.tx = -(k * tx + c * ty);
+            target.ty = -(b * tx + d * ty);
+        };
+        Matrix.prototype.identity = function () {
+            this.a = this.d = 1;
+            this.b = this.c = this.tx = this.ty = 0;
         };
         return Matrix;
     }());
@@ -387,6 +476,31 @@ var eg;
         Shape.prototype.circle = function (color, x, y, radius) {
             this.data.push(["circle", color, x, y, radius]);
         };
+        Shape.prototype.$fillRect = function (color, w, h) {
+            eg.context.save();
+            eg.context.fillStyle = color;
+            eg.context.fillRect(0, 0, w, h);
+            eg.context.restore();
+            this.width = w;
+            this.height = h;
+        };
+        Shape.prototype.$strokeRect = function (color, w, h) {
+            eg.context.save();
+            eg.context.strokeStyle = color;
+            eg.context.strokeRect(0, 0, w, h);
+            eg.context.restore();
+            this.width = w;
+            this.height = h;
+        };
+        Shape.prototype.$circle = function (color, cx, cy, radius) {
+            eg.context.save();
+            eg.context.beginPath();
+            eg.context.strokeStyle = color;
+            eg.context.arc(cx, cy, radius, 0, Math.PI * 2, false);
+            eg.context.stroke();
+            eg.context.restore();
+            this.width = this.height = 2 * radius;
+        };
         Shape.prototype.render = function () {
             var _this = this;
             eg.context.save();
@@ -406,26 +520,15 @@ var eg;
             });
             eg.context.restore();
         };
-        Shape.prototype.$fillRect = function (color, w, h) {
-            eg.context.save();
-            eg.context.fillStyle = color;
-            eg.context.fillRect(0, 0, w, h);
-            eg.context.restore();
+        Shape.prototype.$measureContentBounds = function () {
+            return eg.$tempRect.setTo(-this.anchorOffsetX * this.scaleX, -this.anchorOffsetY * this.scaleY, this.width * this.scaleX, this.height * this.scaleY);
         };
-        Shape.prototype.$strokeRect = function (color, w, h) {
-            eg.context.save();
-            eg.context.strokeStyle = color;
-            eg.context.strokeRect(0, 0, w, h);
-            eg.context.restore();
-        };
-        Shape.prototype.$circle = function (color, cx, cy, radius) {
-            eg.context.save();
-            eg.context.beginPath();
-            eg.context.strokeStyle = color;
-            eg.context.arc(cx, cy, radius, 0, Math.PI * 2, false);
-            eg.context.stroke();
-            eg.context.restore();
-        };
+        __decorate([
+            eg.override
+        ], Shape.prototype, "render", null);
+        __decorate([
+            eg.override
+        ], Shape.prototype, "$measureContentBounds", null);
         return Shape;
     }(eg.DisplayObject));
     eg.Shape = Shape;
@@ -450,6 +553,7 @@ var eg;
         $stage = new eg.DisplayObjectContainer();
         var canvas = document.getElementById('canvas');
         eg.context = canvas.getContext('2d');
+        eg.$touchHandle.init();
         startTicker();
     }
     eg.init = init;
@@ -473,6 +577,77 @@ var eg;
         callbackList.push(fn);
     }
     eg.frameLoop = frameLoop;
+})(eg || (eg = {}));
+var eg;
+(function (eg) {
+    /**
+     * 触摸事件管理
+     */
+    var TouchHandle = (function () {
+        function TouchHandle() {
+        }
+        TouchHandle.prototype.init = function () {
+            this.canvas = eg.context.canvas;
+            this.addListeners();
+        };
+        TouchHandle.prototype.addListeners = function () {
+            this.canvas.addEventListener("mousedown", this.onTouchBegin.bind(this));
+            this.canvas.addEventListener("mousemove", this.onMouseMove.bind(this));
+            this.canvas.addEventListener("mouseup", this.onTouchEnd.bind(this));
+        };
+        TouchHandle.prototype.onTouchBegin = function (event) {
+            var loc = this.getLocation(event);
+            var target = this.findTarget(loc.x, loc.y);
+            if (target) {
+                console.log(target);
+            }
+        };
+        TouchHandle.prototype.onMouseMove = function (event) {
+            // console.log(event);
+        };
+        TouchHandle.prototype.onTouchEnd = function (event) {
+            // console.log(event);
+        };
+        TouchHandle.prototype.getLocation = function (event) {
+            var x = event.pageX;
+            var y = event.pageY;
+            return { x: x, y: y };
+        };
+        TouchHandle.prototype.findTarget = function (stageX, stageY) {
+            return eg.stage.hitTest(stageX, stageY);
+        };
+        return TouchHandle;
+    }());
+    eg.$touchHandle = new TouchHandle();
+})(eg || (eg = {}));
+var eg;
+(function (eg) {
+    function override(target, propertyKey, descriptor) { }
+    eg.override = override;
+    eg.$tempRect = {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        setTo: function (x, y, w, h) {
+            this.x = x;
+            this.y = y;
+            this.width = w;
+            this.height = h;
+            return this;
+        },
+        contains: function (localX, localY) {
+            if (localX >= this.x
+                && localX <= this.x + this.width
+                && localY >= this.y
+                && localY <= this.y + this.height) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+    };
 })(eg || (eg = {}));
 var game;
 (function (game) {

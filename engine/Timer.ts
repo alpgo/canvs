@@ -26,6 +26,8 @@ module eg {
         
         var canvas = document.getElementById('canvas') as HTMLCanvasElement;
         context = canvas.getContext('2d');
+
+        $touchHandle.init();
         
         startTicker();
     }

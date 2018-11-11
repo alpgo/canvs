@@ -35,9 +35,56 @@ module eg {
             return this;
         }
 
+        // return this * o
         public $append(o: Matrix): Matrix {
             return this.append(o.a, o.b, o.c, o.d, o.tx, o.ty);
         }
 
+        /**
+         * 逆矩阵
+         */
+        public invert() {
+            this.$invertInto(this);
+        }
+
+        public $invertInto(target: Matrix) {
+            let a = this.a;
+            let b = this.b;
+            let c = this.c;
+            let d = this.d;
+            let tx = this.tx;
+            let ty = this.ty;
+            if (b == 0 && c == 0) {
+                target.b = target.c = 0;
+                if (a == 0 || d == 0) {
+                    target.a = target.d = target.tx = target.ty = 0;
+                }
+                else {
+                    a = target.a = 1 / a;
+                    d = target.d = 1 / d;
+                    target.tx = -a * tx;
+                    target.ty = -d * ty;
+                }
+
+                return;
+            }
+            let determinant = a * d - b * c;
+            if (determinant == 0) {
+                target.identity();
+                return;
+            }
+            determinant = 1 / determinant;
+            let k = target.a = d * determinant;
+            b = target.b = -b * determinant;
+            c = target.c = -c * determinant;
+            d = target.d = a * determinant;
+            target.tx = -(k * tx + c * ty);
+            target.ty = -(b * tx + d * ty);
+        }
+
+        public identity(): void {
+            this.a = this.d = 1;
+            this.b = this.c = this.tx = this.ty = 0;
+        }
     }
 }

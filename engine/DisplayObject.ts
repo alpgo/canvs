@@ -1,6 +1,4 @@
-/**
- * 游戏渲染基本对象
- */
+/// <reference path="Utils.ts" />
 
 module eg {
 
@@ -14,10 +12,13 @@ module eg {
         stage.height = value;
     }
 
-    export class DisplayObject {
+    /**
+     * 游戏渲染基本对象
+     */
+    export class DisplayObject extends Event {
 
         constructor() {
-
+            super();
         }
 
         private $matrix: Matrix = new Matrix();
@@ -180,5 +181,7 @@ module eg {
         public render() { }
 
         public $measureContentBounds(): any { }
+        
     }
+
 }

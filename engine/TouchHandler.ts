@@ -21,24 +21,28 @@ module eg {
         }
 
         onTouchBegin(event: any) {
+            event.preventDefault();
             var loc = this.getLocation(event);
             var target = this.findTarget(loc.x, loc.y);
             if (target) {
-                console.log(target);
+                target.dispatchEvent(Event.TouchStart, event);
             }
         }
 
         onMouseMove(event: any) {
+            event.preventDefault();
             // console.log(event);
         }
 
         onTouchEnd(event: any) {
+            event.preventDefault();
             // console.log(event);
         }
 
         private getLocation(event: any): { x: number, y: number } {
-            let x = event.pageX;
-            let y = event.pageY;
+            let rect = context.canvas.getBoundingClientRect();
+            let x = event.pageX - rect.left;
+            let y = event.pageY - rect.top;
             return { x, y };
         }
 

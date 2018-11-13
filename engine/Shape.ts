@@ -4,6 +4,18 @@ module eg {
             super();
         }
 
+        private testColor: number[] = null;
+
+        public updateColor() {
+            var arr = this.testColor = this.testColor || [0, 0, 0, 0.5];
+            arr[0] += Math.random() * 100;
+            arr[1] += Math.random() * 100;
+            arr[2] += Math.random() * 100;
+            if (arr[0] > 255) { arr[0] = 0 };
+            if (arr[1] > 255) { arr[1] = 0 };
+            if (arr[2] > 255) { arr[2] = 0 };
+        }
+
         private data: any[] = [];
 
         public fillRect(color: string, w: number, h: number) {
@@ -20,7 +32,12 @@ module eg {
 
         private $fillRect(color: string, w: number, h: number) {
             context.save();
-            context.fillStyle = color;
+            if (this.testColor) {
+                let arr = this.testColor;
+                context.fillStyle = `rgba(${arr.join(",")})`;
+            } else {
+                context.fillStyle = color;
+            }
             context.fillRect(0, 0, w, h);
             context.restore();
             this.width = w;

@@ -47,9 +47,87 @@ var eg;
     }
     eg.scaleLowHigh = scaleLowHigh;
 })(eg || (eg = {}));
-/**
- * 游戏渲染基本对象
- */
+var eg;
+(function (eg) {
+    function override(target, propertyKey, descriptor) { }
+    eg.override = override;
+    eg.$tempRect = {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        setTo: function (x, y, w, h) {
+            this.x = x;
+            this.y = y;
+            this.width = w;
+            this.height = h;
+            return this;
+        },
+        contains: function (localX, localY) {
+            if (localX >= this.x
+                && localX <= this.x + this.width
+                && localY >= this.y
+                && localY <= this.y + this.height) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+    };
+    /**
+     * 事件功能
+     */
+    var Event = (function () {
+        function Event() {
+            this.$eventMap = {};
+        }
+        Event.prototype.addEventListener = function (eventName, callback, target) {
+            var arr = this.$eventMap[eventName] = this.$eventMap[eventName] || [];
+            for (var i = 0; i < arr.length; i += 2) {
+                var fn = arr[i];
+                var that = arr[i + 1];
+                if (fn === callback && that === target) {
+                    console.warn("\u91CD\u590D\u76D1\u542C" + callback + " - " + target);
+                    return;
+                }
+            }
+            arr.push(callback, target);
+        };
+        Event.prototype.removeEventListener = function (eventName, callback, target) {
+            if (!this.$eventMap[eventName])
+                return;
+            var arr = this.$eventMap[eventName];
+            for (var i = 0; i < arr.length; i += 2) {
+                var fn = arr[i];
+                var that = arr[i + 1];
+                if (fn === callback && that === target) {
+                    arr.splice(i, 2);
+                    break;
+                }
+            }
+            if (arr.length == 0) {
+                delete this.$eventMap[eventName];
+            }
+        };
+        Event.prototype.dispatchEvent = function (eventName, data) {
+            if (!this.$eventMap[eventName])
+                return;
+            var arr = this.$eventMap[eventName];
+            for (var i = 0; i < arr.length; i += 2) {
+                var fn = arr[i];
+                var that = arr[i + 1];
+                fn.call(that, data);
+            }
+        };
+        Event.TouchStart = "touchstart";
+        Event.TouchEnd = "touchend";
+        Event.TouchMove = "touchmove";
+        return Event;
+    }());
+    eg.Event = Event;
+})(eg || (eg = {}));
+/// <reference path="Utils.ts" />
 var eg;
 (function (eg) {
     function setStageWidth(value) {
@@ -62,18 +140,24 @@ var eg;
         eg.stage.height = value;
     }
     eg.setStageHeight = setStageHeight;
-    var DisplayObject = (function () {
+    /**
+     * 游戏渲染基本对象
+     */
+    var DisplayObject = (function (_super) {
+        __extends(DisplayObject, _super);
         function DisplayObject() {
-            this.$matrix = new eg.Matrix();
-            this.$width = 0;
-            this.$height = 0;
-            this.$anchorOffsetX = 0;
-            this.$anchorOffsetY = 0;
-            this.$x = 0;
-            this.$y = 0;
-            this.$scaleX = 1;
-            this.$scaleY = 1;
-            this.$rotation = 0;
+            var _this = _super.call(this) || this;
+            _this.$matrix = new eg.Matrix();
+            _this.$width = 0;
+            _this.$height = 0;
+            _this.$anchorOffsetX = 0;
+            _this.$anchorOffsetY = 0;
+            _this.$x = 0;
+            _this.$y = 0;
+            _this.$scaleX = 1;
+            _this.$scaleY = 1;
+            _this.$rotation = 0;
+            return _this;
         }
         DisplayObject.prototype.getMatrix = function () {
             this.$matrix.tx = this.$x;
@@ -230,7 +314,7 @@ var eg;
         DisplayObject.prototype.render = function () { };
         DisplayObject.prototype.$measureContentBounds = function () { };
         return DisplayObject;
-    }());
+    }(eg.Event));
     eg.DisplayObject = DisplayObject;
 })(eg || (eg = {}));
 /// <reference path="DisplayObject.ts" />
@@ -464,9 +548,28 @@ var eg;
         __extends(Shape, _super);
         function Shape() {
             var _this = _super.call(this) || this;
+            _this.testColor = null;
             _this.data = [];
             return _this;
         }
+        Shape.prototype.updateColor = function () {
+            var arr = this.testColor = this.testColor || [0, 0, 0, 0.5];
+            arr[0] += Math.random() * 100;
+            arr[1] += Math.random() * 100;
+            arr[2] += Math.random() * 100;
+            if (arr[0] > 255) {
+                arr[0] = 0;
+            }
+            ;
+            if (arr[1] > 255) {
+                arr[1] = 0;
+            }
+            ;
+            if (arr[2] > 255) {
+                arr[2] = 0;
+            }
+            ;
+        };
         Shape.prototype.fillRect = function (color, w, h) {
             this.data.push(["fill", color, w, h]);
         };
@@ -478,7 +581,13 @@ var eg;
         };
         Shape.prototype.$fillRect = function (color, w, h) {
             eg.context.save();
-            eg.context.fillStyle = color;
+            if (this.testColor) {
+                var arr = this.testColor;
+                eg.context.fillStyle = "rgba(" + arr.join(",") + ")";
+            }
+            else {
+                eg.context.fillStyle = color;
+            }
             eg.context.fillRect(0, 0, w, h);
             eg.context.restore();
             this.width = w;
@@ -596,21 +705,25 @@ var eg;
             this.canvas.addEventListener("mouseup", this.onTouchEnd.bind(this));
         };
         TouchHandle.prototype.onTouchBegin = function (event) {
+            event.preventDefault();
             var loc = this.getLocation(event);
             var target = this.findTarget(loc.x, loc.y);
             if (target) {
-                console.log(target);
+                target.dispatchEvent(eg.Event.TouchStart, event);
             }
         };
         TouchHandle.prototype.onMouseMove = function (event) {
+            event.preventDefault();
             // console.log(event);
         };
         TouchHandle.prototype.onTouchEnd = function (event) {
+            event.preventDefault();
             // console.log(event);
         };
         TouchHandle.prototype.getLocation = function (event) {
-            var x = event.pageX;
-            var y = event.pageY;
+            var rect = eg.context.canvas.getBoundingClientRect();
+            var x = event.pageX - rect.left;
+            var y = event.pageY - rect.top;
             return { x: x, y: y };
         };
         TouchHandle.prototype.findTarget = function (stageX, stageY) {
@@ -619,35 +732,6 @@ var eg;
         return TouchHandle;
     }());
     eg.$touchHandle = new TouchHandle();
-})(eg || (eg = {}));
-var eg;
-(function (eg) {
-    function override(target, propertyKey, descriptor) { }
-    eg.override = override;
-    eg.$tempRect = {
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        setTo: function (x, y, w, h) {
-            this.x = x;
-            this.y = y;
-            this.width = w;
-            this.height = h;
-            return this;
-        },
-        contains: function (localX, localY) {
-            if (localX >= this.x
-                && localX <= this.x + this.width
-                && localY >= this.y
-                && localY <= this.y + this.height) {
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
-    };
 })(eg || (eg = {}));
 var game;
 (function (game) {
@@ -659,37 +743,140 @@ var game;
         "assets/h2.gif",
         "assets/h3.gif",
     ];
+    // 数据对象
+    var countModel = function () {
+        var count = 0;
+        var updates = [];
+        return {
+            getCount: function () {
+                return count;
+            },
+            addCount: function () {
+                ++count;
+                if (count) {
+                    updates.forEach(function (fn) { return fn(); });
+                }
+            },
+            addUpdate: function (fn) {
+                updates.push(fn);
+            }
+        };
+    }();
     // 游戏入口
     function startGame() {
         eg.init();
-        eg.loadImageArray(picAssets, main);
+        eg.loadImageArray(picAssets, function () { new Main(); });
     }
     game.startGame = startGame;
-    function main() {
-        eg.setStageWidth(600);
-        eg.setStageHeight(400);
-        var container = new eg.DisplayObjectContainer();
-        container.x = eg.stage.width / 2;
-        container.y = eg.stage.height / 2;
-        eg.stage.addChild(container);
-        var rect = new eg.Shape();
-        rect.fillRect("#3366CC", 100, 100);
-        rect.strokeRect("#FF6600", 100, 100);
-        rect.circle("#FF00FF", 50, 50, 50 * Math.sqrt(2));
-        rect.anchorOffsetX = 100 / 2;
-        rect.anchorOffsetY = 100 / 2;
-        container.addChild(rect);
-        eg.frameLoop(function () {
-            container.rotation += 0.5;
-        });
-        var go = new eg.Bitmap("assets/go.png");
-        go.anchorOffsetX = go.width / 2;
-        go.anchorOffsetY = go.height / 2;
-        container.addChild(go);
-        eg.frameLoop(function () {
-            go.rotation += -3;
-        });
-        eg.moveLeftRight(container, 200, 400);
-    }
+    // 装饰器应用
+    var Decorate = (function () {
+        function Decorate() {
+        }
+        Decorate.start = function (target, property, descriptor) {
+            /*
+             因为对象没有创建，此时将需要初始化的类方法保存到类的原型中
+             这里是将
+                [Main.prototype.createContainer,
+                Main.prototype.createRect,
+                Main.prototype.createGo] 三个方法先保存到 Main.prototype[Decorate.START] 中，
+            当 this.decorate() 执行时，new Main()已经创建了对象了, this 起作用了，
+                Main.prototype.createContainer.call(this); 即可正确的执行了方法了。
+                如果直接执行 Main.prototype.createContainer(); 那么方法中的this是无效的。
+            */
+            var arr = target[Decorate.START] = target[Decorate.START] || [];
+            arr.push(target[property]);
+        };
+        Decorate.update = function (model) {
+            /**
+             * 该例子中, 此处的target为  Main.prototype,
+             * property: "display" 即装饰器下面的方法名称
+             * descriptor: Object.getOwnPropertyDescriptor(Main.prototype, "display") {获取对象下的属性描述}
+             * 具体的自己找资料熟悉: PropertyDescriptor, Object.defineProperty
+             */
+            return function (target, property, descriptor) {
+                var arr = target[Decorate.UPDATE] = target[Decorate.UPDATE] || [];
+                arr.push([model, descriptor.value]);
+            };
+        };
+        Decorate.prototype.decorate = function () {
+            var _this = this;
+            // 此时对象已经初始化了，this已经有效了
+            (this[Decorate.START] || []).forEach(function (fn) { fn.call(_this); });
+            (this[Decorate.UPDATE] || []).forEach(function (_a) {
+                var model = _a[0], fn = _a[1];
+                model.addUpdate(fn.bind(_this));
+            });
+        };
+        // 视图初始化
+        Decorate.START = '__start__';
+        // 监听数据变化 => 通知视图更新数据
+        Decorate.UPDATE = '__update__';
+        return Decorate;
+    }());
+    game.Decorate = Decorate;
+    game.start = Decorate.start;
+    game.update = Decorate.update;
+    var Main = (function (_super) {
+        __extends(Main, _super);
+        function Main() {
+            var _this = _super.call(this) || this;
+            eg.setStageWidth(600);
+            eg.setStageHeight(400);
+            _this.decorate();
+            return _this;
+        }
+        Main.prototype.createContainer = function () {
+            var _this = this;
+            this.container = new eg.DisplayObjectContainer();
+            this.container.x = eg.stage.width / 2;
+            this.container.y = eg.stage.height / 2;
+            eg.stage.addChild(this.container);
+            eg.frameLoop(function () {
+                _this.container.rotation += 0.5;
+            });
+            eg.moveLeftRight(this.container, 200, 400);
+        };
+        Main.prototype.createRect = function () {
+            this.shape = new eg.Shape();
+            this.shape.fillRect("#3366CC", 100, 100);
+            this.shape.strokeRect("#FF6600", 100, 100);
+            this.shape.circle("#FF00FF", 50, 50, 50 * Math.sqrt(2));
+            this.shape.anchorOffsetX = 100 / 2;
+            this.shape.anchorOffsetY = 100 / 2;
+            this.container.addChild(this.shape);
+        };
+        Main.prototype.createGo = function () {
+            var _this = this;
+            this.go = new eg.Bitmap("assets/go.png");
+            this.go.anchorOffsetX = this.go.width / 2;
+            this.go.anchorOffsetY = this.go.height / 2;
+            this.container.addChild(this.go);
+            eg.frameLoop(function () {
+                _this.go.rotation += -3;
+            });
+            this.go.addEventListener(eg.Event.TouchStart, function () {
+                countModel.addCount(); // 更新数据变化
+            }, this);
+        };
+        // 视图渲染，监听countModel的数据变化, 实现数据与视图分离
+        Main.prototype.display = function () {
+            var count = document.getElementById('count');
+            count.innerHTML = countModel.getCount() + "";
+            this.shape.updateColor();
+        };
+        __decorate([
+            game.start
+        ], Main.prototype, "createContainer", null);
+        __decorate([
+            game.start
+        ], Main.prototype, "createRect", null);
+        __decorate([
+            game.start
+        ], Main.prototype, "createGo", null);
+        __decorate([
+            game.update(countModel)
+        ], Main.prototype, "display", null);
+        return Main;
+    }(Decorate));
 })(game || (game = {}));
 //# sourceMappingURL=game.js.map

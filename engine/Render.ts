@@ -6,7 +6,7 @@ module eg {
     }
 
     // 每一帧渲染对象次数
-    var count = 0;
+    export var count = 0;
 
     export function renderContainer(container: DisplayObjectContainer) {
         if (container.cacheAsBitmap) {

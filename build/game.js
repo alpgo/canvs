@@ -18,14 +18,14 @@ var eg;
 (function (eg) {
     // 左右循环运动
     function moveLeftRight(obj, left, right) {
-        var step = 1;
+        var step = 2;
         eg.frameLoop(function () {
             obj.x += step;
             if (obj.x <= left) {
-                step = 1;
+                step = 2;
             }
             else if (obj.x >= right) {
-                step = -1;
+                step = -2;
             }
             else { }
         });
@@ -510,12 +510,12 @@ var eg;
 (function (eg) {
     function render() {
         eg.context.clearRect(0, 0, eg.context.canvas.width, eg.context.canvas.height);
-        count = 0;
+        eg.count = 0;
         renderContainer(eg.stage);
     }
     eg.render = render;
     // 每一帧渲染对象次数
-    var count = 0;
+    eg.count = 0;
     function renderContainer(container) {
         if (container.cacheAsBitmap) {
             if (!container.displayList) {
@@ -525,7 +525,7 @@ var eg;
                 container.displayList.cacheAsOffCanvas(container);
             }
             container.childMatrixChanged = false;
-            count++;
+            eg.count++;
             container.displayList.render();
             return;
         }
@@ -537,12 +537,12 @@ var eg;
                 renderContainer(child);
             }
             else {
-                count++;
+                eg.count++;
                 renderChild(child, eg.context);
             }
         });
         // display fps
-        document.getElementById('fps').innerHTML = count + "";
+        document.getElementById('fps').innerHTML = eg.count + "";
     }
     eg.renderContainer = renderContainer;
     function renderChild(child, context2D) {
@@ -567,7 +567,9 @@ var eg;
             this.cacheAsOffCanvas(this.target);
         }
         RenderNode.prototype.cacheAsOffCanvas = function (container) {
-            this.context2D.clearRect(0, 0, this.context2D.canvas.width, this.context2D.canvas.height);
+            if (this.target === container) {
+                this.context2D.clearRect(0, 0, this.context2D.canvas.width, this.context2D.canvas.height);
+            }
             var children = container.$children;
             var length = children.length;
             for (var i = 0; i < length; i++) {
@@ -583,6 +585,7 @@ var eg;
                 m.$append(inverted).$append(childMatrix);
                 this.context2D.save();
                 this.context2D.transform(m.a, m.b, m.c, m.d, m.tx + 200, m.ty + 200);
+                eg.count++;
                 node.render(this.context2D);
                 this.context2D.restore();
             }
@@ -927,6 +930,7 @@ var game;
             c.addChild(o1.container);
             o2.container.y += 100;
             c.addChild(o2.container);
+            eg.stage.addChild(c);
             return _this;
         }
         return Main;
@@ -943,15 +947,14 @@ var game;
             this.container = new eg.DisplayObjectContainer();
             this.container.x = eg.stage.width / 2;
             this.container.y = eg.stage.height / 2;
-            eg.stage.addChild(this.container);
+            eg.moveLeftRight(this.container, 71, 600 - 71);
             eg.frameLoop(function () {
                 _this.container.rotation += 0.5;
             });
-            eg.moveLeftRight(this.container, 200, 400);
             this.container.cacheAsBitmap = false;
             document.getElementById('fps').style.color = "#3399ee";
+            // 可看到页面中fps中的渲染对象数量变少了
             setTimeout(function () {
-                // 可看到页面中fps中的渲染对象数量变少了
                 _this.container.cacheAsBitmap = true;
                 document.getElementById('fps').style.color = "#ff0000";
             }, 2000);
@@ -966,13 +969,13 @@ var game;
             this.container.addChild(this.shape);
         };
         Layer.prototype.createGo = function () {
-            var _this = this;
             this.go = new eg.Bitmap("assets/go.png");
             this.go.anchorOffsetX = this.go.width / 2;
             this.go.anchorOffsetY = this.go.height / 2;
             this.container.addChild(this.go);
+            // 若将旋转动画开启，那么父容器的cache失效了，会引起多余的绘制次数
             eg.frameLoop(function () {
-                _this.go.rotation += -3;
+                // this.go.rotation += -3;
             });
             this.go.addEventListener(eg.Event.TouchStart, function () {
                 countModel.addCount(); // 更新数据变化

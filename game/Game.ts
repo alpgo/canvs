@@ -98,6 +98,8 @@ module game {
 
             o2.container.y += 100;
             c.addChild(o2.container);
+
+            eg.stage.addChild(c);
         }
     }
 
@@ -114,15 +116,15 @@ module game {
             this.container = new eg.DisplayObjectContainer();
             this.container.x = eg.stage.width / 2;
             this.container.y = eg.stage.height / 2;
-            eg.stage.addChild(this.container);
+            eg.moveLeftRight(this.container, 71, 600 - 71);
             eg.frameLoop(() => {
                 this.container.rotation += 0.5;
             });
-            eg.moveLeftRight(this.container, 200, 400);
             this.container.cacheAsBitmap = false;
             document.getElementById('fps').style.color = "#3399ee";
+
+            // 可看到页面中fps中的渲染对象数量变少了
             setTimeout(() => {
-                // 可看到页面中fps中的渲染对象数量变少了
                 this.container.cacheAsBitmap = true;
                 document.getElementById('fps').style.color = "#ff0000";
             }, 2000);
@@ -147,8 +149,9 @@ module game {
             this.go.anchorOffsetX = this.go.width / 2;
             this.go.anchorOffsetY = this.go.height / 2;
             this.container.addChild(this.go);
+            // 若将旋转动画开启，那么父容器的cache失效了，会引起多余的绘制次数
             eg.frameLoop(() => {
-                this.go.rotation += -3;
+                // this.go.rotation += -3;
             });
             this.go.addEventListener(eg.Event.TouchStart, () => {
                 countModel.addCount();  // 更新数据变化

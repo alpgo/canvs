@@ -2,13 +2,13 @@ module eg {
 
     // 左右循环运动
     export function moveLeftRight(obj: DisplayObject, left: number, right: number) {
-        let step = 1;
+        let step = 2;
         frameLoop(function () {
             obj.x += step;
             if (obj.x <= left) {
-                step = 1;
+                step = 2;
             } else if (obj.x >= right) {
-                step = -1;
+                step = -2;
             } else { }
         });
     }

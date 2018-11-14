@@ -16,7 +16,9 @@ module eg {
         }
 
         public cacheAsOffCanvas(container: DisplayObjectContainer) {
-            this.context2D.clearRect(0, 0, this.context2D.canvas.width, this.context2D.canvas.height);
+            if (this.target === container) {
+                this.context2D.clearRect(0, 0, this.context2D.canvas.width, this.context2D.canvas.height);
+            }
             let children = container.$children;
             let length = children.length;
             for (let i = 0; i < length; i++) {
@@ -32,6 +34,7 @@ module eg {
                 m.$append(inverted).$append(childMatrix);
                 this.context2D.save();
                 this.context2D.transform(m.a, m.b, m.c, m.d, m.tx + 200, m.ty + 200);
+                count++;
                 node.render(this.context2D);
                 this.context2D.restore();
             }

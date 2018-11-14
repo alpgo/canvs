@@ -22,8 +22,8 @@ module eg {
         }
 
         @override
-        public render() {
-            context.drawImage(this.image, -this.anchorOffsetX, -this.anchorOffsetY);
+        public render(context2D) {
+            context2D.drawImage(this.image, -this.anchorOffsetX, -this.anchorOffsetY);
         }
 
         @override

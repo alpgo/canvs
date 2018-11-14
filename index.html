@@ -8,20 +8,32 @@
             font-size: 30px;
         }
 
+        #fps-call {
+            position: absolute;
+            font-size: 16px;
+            top: 30px;
+            left: 20px;
+            font-weight: bold;
+        }
+
+        #fps {
+            font-size: 1.5em;
+        }
+
         #info p {
             margin-top: 20px;
         }
 
         #info p:nth-child(1) {
             float: left;
-            margin-left: 150px;
+            margin-left: 200px;
             background-color: #FC3E33;
             padding: 2px 10px 2px 10px;
         }
 
         #info p:nth-child(2) {
             float: left;
-            width: 30px;
+            width: 60px;
             text-align: center;
             margin-left: 10px;
             padding: 2px 10px 2px 10px;
@@ -41,6 +53,7 @@
 
 <body>
 
+    <div id="fps-call">(FPS)渲染对象个数：<span id='fps'>0</span></div>
     <div id="info">
         <p>点击<abbr> GO </abbr>次数：</p>
         <p id='count'> 0 </p>

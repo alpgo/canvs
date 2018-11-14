@@ -101,6 +101,7 @@ module eg {
 
         public set x(value: number) {
             this.$x = value;
+            this.setContainerMatrixFlag();
         }
 
         private $y: number = 0;
@@ -111,6 +112,7 @@ module eg {
 
         public set y(value: number) {
             this.$y = value;
+            this.setContainerMatrixFlag();
         }
 
         private $scaleX: number = 1;
@@ -121,6 +123,7 @@ module eg {
 
         public set scaleX(value: number) {
             this.$scaleX = value;
+            this.setContainerMatrixFlag();
         }
 
         private $scaleY: number = 1;
@@ -131,6 +134,7 @@ module eg {
 
         public set scaleY(value: number) {
             this.$scaleY = value;
+            this.setContainerMatrixFlag();
         }
 
         public set scale(value: number) {
@@ -146,6 +150,7 @@ module eg {
 
         public set rotation(value: number) {
             this.$rotation = value;
+            this.setContainerMatrixFlag();
         }
 
         private $parent: DisplayObjectContainer;
@@ -156,6 +161,16 @@ module eg {
 
         public set parent(p: DisplayObjectContainer) {
             this.$parent = p;
+        }
+
+        public setContainerMatrixFlag() {
+            var p = this as any;
+            var notContainer: boolean = false;
+            do {
+                p = p.parent;
+                notContainer = !(p instanceof DisplayObjectContainer);
+            } while (p && notContainer);
+            p && (p.childMatrixChanged = true);
         }
 
         public $getInvertedConcatenatedMatrix() {
@@ -178,10 +193,10 @@ module eg {
         /**
          * 以下需要子类实现
          */
-        public render() { }
+        public render(context2D: CanvasRenderingContext2D) { }
 
         public $measureContentBounds(): any { }
-        
+
     }
 
 }

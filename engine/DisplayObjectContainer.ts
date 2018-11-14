@@ -26,5 +26,22 @@ module eg {
             }
             return null;
         }
+
+        private $cacheAsBitmap: boolean = false;
+
+        public get cacheAsBitmap(): boolean {
+            return this.$cacheAsBitmap;
+        }
+
+        public set cacheAsBitmap(value: boolean) {
+            if (this.$cacheAsBitmap == value) {
+                return;
+            }
+            this.$cacheAsBitmap = value;
+        }
+
+        public displayList: RenderNode = null;
+
+        public childMatrixChanged: boolean = false;
     }
 }

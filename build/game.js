@@ -231,6 +231,7 @@ var eg;
             },
             set: function (value) {
                 this.$x = value;
+                this.setContainerMatrixFlag();
             },
             enumerable: true,
             configurable: true
@@ -241,6 +242,7 @@ var eg;
             },
             set: function (value) {
                 this.$y = value;
+                this.setContainerMatrixFlag();
             },
             enumerable: true,
             configurable: true
@@ -251,6 +253,7 @@ var eg;
             },
             set: function (value) {
                 this.$scaleX = value;
+                this.setContainerMatrixFlag();
             },
             enumerable: true,
             configurable: true
@@ -261,6 +264,7 @@ var eg;
             },
             set: function (value) {
                 this.$scaleY = value;
+                this.setContainerMatrixFlag();
             },
             enumerable: true,
             configurable: true
@@ -279,6 +283,7 @@ var eg;
             },
             set: function (value) {
                 this.$rotation = value;
+                this.setContainerMatrixFlag();
             },
             enumerable: true,
             configurable: true
@@ -293,6 +298,15 @@ var eg;
             enumerable: true,
             configurable: true
         });
+        DisplayObject.prototype.setContainerMatrixFlag = function () {
+            var p = this;
+            var notContainer = false;
+            do {
+                p = p.parent;
+                notContainer = !(p instanceof eg.DisplayObjectContainer);
+            } while (p && notContainer);
+            p && (p.childMatrixChanged = true);
+        };
         DisplayObject.prototype.$getInvertedConcatenatedMatrix = function () {
             var m = new eg.Matrix();
             this.$getConcatenatedMatrix().$invertInto(m);
@@ -311,7 +325,7 @@ var eg;
         /**
          * 以下需要子类实现
          */
-        DisplayObject.prototype.render = function () { };
+        DisplayObject.prototype.render = function (context2D) { };
         DisplayObject.prototype.$measureContentBounds = function () { };
         return DisplayObject;
     }(eg.Event));
@@ -345,8 +359,8 @@ var eg;
             enumerable: true,
             configurable: true
         });
-        Bitmap.prototype.render = function () {
-            eg.context.drawImage(this.image, -this.anchorOffsetX, -this.anchorOffsetY);
+        Bitmap.prototype.render = function (context2D) {
+            context2D.drawImage(this.image, -this.anchorOffsetX, -this.anchorOffsetY);
         };
         Bitmap.prototype.$measureContentBounds = function () {
             return eg.$tempRect.setTo(-this.anchorOffsetX * this.scaleX, -this.anchorOffsetY * this.scaleY, this.width * this.scaleX, this.height * this.scaleY);
@@ -369,6 +383,9 @@ var eg;
         function DisplayObjectContainer() {
             var _this = _super.call(this) || this;
             _this.$children = [];
+            _this.$cacheAsBitmap = false;
+            _this.displayList = null;
+            _this.childMatrixChanged = false;
             return _this;
         }
         DisplayObjectContainer.prototype.addChild = function (child) {
@@ -386,6 +403,19 @@ var eg;
             }
             return null;
         };
+        Object.defineProperty(DisplayObjectContainer.prototype, "cacheAsBitmap", {
+            get: function () {
+                return this.$cacheAsBitmap;
+            },
+            set: function (value) {
+                if (this.$cacheAsBitmap == value) {
+                    return;
+                }
+                this.$cacheAsBitmap = value;
+            },
+            enumerable: true,
+            configurable: true
+        });
         return DisplayObjectContainer;
     }(eg.DisplayObject));
     eg.DisplayObjectContainer = DisplayObjectContainer;
@@ -480,26 +510,94 @@ var eg;
 (function (eg) {
     function render() {
         eg.context.clearRect(0, 0, eg.context.canvas.width, eg.context.canvas.height);
+        count = 0;
         renderContainer(eg.stage);
     }
     eg.render = render;
+    // 每一帧渲染对象次数
+    var count = 0;
     function renderContainer(container) {
+        if (container.cacheAsBitmap) {
+            if (!container.displayList) {
+                container.displayList = new eg.RenderNode(container);
+            }
+            else if (container.childMatrixChanged) {
+                container.displayList.cacheAsOffCanvas(container);
+            }
+            container.childMatrixChanged = false;
+            count++;
+            container.displayList.render();
+            return;
+        }
+        else {
+            container.displayList = null;
+        }
         container.$children.forEach(function (child) {
             if (child instanceof eg.DisplayObjectContainer) {
                 renderContainer(child);
             }
             else {
-                renderChild(child);
+                count++;
+                renderChild(child, eg.context);
             }
         });
+        // display fps
+        document.getElementById('fps').innerHTML = count + "";
     }
-    function renderChild(child) {
-        eg.context.save();
+    eg.renderContainer = renderContainer;
+    function renderChild(child, context2D) {
+        context2D.save();
         var m = child.$getConcatenatedMatrix();
-        eg.context.transform(m.a, m.b, m.c, m.d, m.tx, m.ty);
-        child.render();
-        eg.context.restore();
+        context2D.transform(m.a, m.b, m.c, m.d, m.tx, m.ty);
+        child.render(context2D);
+        context2D.restore();
     }
+    eg.renderChild = renderChild;
+})(eg || (eg = {}));
+// 离屏canvas
+var eg;
+(function (eg) {
+    var RenderNode = (function () {
+        function RenderNode(target) {
+            this.target = target;
+            var canvas = document.createElement('canvas');
+            canvas.width = eg.context.canvas.width;
+            canvas.height = eg.context.canvas.height;
+            this.context2D = canvas.getContext('2d');
+            this.cacheAsOffCanvas(this.target);
+        }
+        RenderNode.prototype.cacheAsOffCanvas = function (container) {
+            this.context2D.clearRect(0, 0, this.context2D.canvas.width, this.context2D.canvas.height);
+            var children = container.$children;
+            var length = children.length;
+            for (var i = 0; i < length; i++) {
+                var node = children[i];
+                if (node instanceof eg.DisplayObjectContainer) {
+                    this.cacheAsOffCanvas(node);
+                    continue;
+                }
+                var childMatrix = node.$getConcatenatedMatrix();
+                // 获取该元素在this.target容器下的坐标变换
+                var m = new eg.Matrix();
+                var inverted = this.target.$getInvertedConcatenatedMatrix();
+                m.$append(inverted).$append(childMatrix);
+                this.context2D.save();
+                this.context2D.transform(m.a, m.b, m.c, m.d, m.tx + 200, m.ty + 200);
+                node.render(this.context2D);
+                this.context2D.restore();
+            }
+        };
+        RenderNode.prototype.render = function () {
+            eg.context.save();
+            var m = this.target.$getConcatenatedMatrix();
+            eg.context.transform(m.a, m.b, m.c, m.d, m.tx, m.ty);
+            eg.context.transform(1, 0, 0, 1, -200, -200);
+            eg.context.drawImage(this.context2D.canvas, 0, 0);
+            eg.context.restore();
+        };
+        return RenderNode;
+    }());
+    eg.RenderNode = RenderNode;
 })(eg || (eg = {}));
 /**
  * 资源加载
@@ -579,55 +677,55 @@ var eg;
         Shape.prototype.circle = function (color, x, y, radius) {
             this.data.push(["circle", color, x, y, radius]);
         };
-        Shape.prototype.$fillRect = function (color, w, h) {
-            eg.context.save();
+        Shape.prototype.$fillRect = function (context, color, w, h) {
+            context.save();
             if (this.testColor) {
                 var arr = this.testColor;
-                eg.context.fillStyle = "rgba(" + arr.join(",") + ")";
+                context.fillStyle = "rgba(" + arr.join(",") + ")";
             }
             else {
-                eg.context.fillStyle = color;
+                context.fillStyle = color;
             }
-            eg.context.fillRect(0, 0, w, h);
-            eg.context.restore();
+            context.fillRect(0, 0, w, h);
+            context.restore();
             this.width = w;
             this.height = h;
         };
-        Shape.prototype.$strokeRect = function (color, w, h) {
-            eg.context.save();
-            eg.context.strokeStyle = color;
-            eg.context.strokeRect(0, 0, w, h);
-            eg.context.restore();
+        Shape.prototype.$strokeRect = function (context, color, w, h) {
+            context.save();
+            context.strokeStyle = color;
+            context.strokeRect(0, 0, w, h);
+            context.restore();
             this.width = w;
             this.height = h;
         };
-        Shape.prototype.$circle = function (color, cx, cy, radius) {
-            eg.context.save();
-            eg.context.beginPath();
-            eg.context.strokeStyle = color;
-            eg.context.arc(cx, cy, radius, 0, Math.PI * 2, false);
-            eg.context.stroke();
-            eg.context.restore();
+        Shape.prototype.$circle = function (context, color, cx, cy, radius) {
+            context.save();
+            context.beginPath();
+            context.strokeStyle = color;
+            context.arc(cx, cy, radius, 0, Math.PI * 2, false);
+            context.stroke();
+            context.restore();
             this.width = this.height = 2 * radius;
         };
-        Shape.prototype.render = function () {
+        Shape.prototype.render = function (context2D) {
             var _this = this;
-            eg.context.save();
-            eg.context.transform(1, 0, 0, 1, -this.anchorOffsetX, -this.anchorOffsetY);
+            context2D.save();
+            context2D.transform(1, 0, 0, 1, -this.anchorOffsetX, -this.anchorOffsetY);
             this.data.forEach(function (arr) {
                 var type = arr[0];
                 if (type == "fill") {
-                    _this.$fillRect(arr[1], arr[2], arr[3]);
+                    _this.$fillRect(context2D, arr[1], arr[2], arr[3]);
                 }
                 else if (type == "stroke") {
-                    _this.$strokeRect(arr[1], arr[2], arr[3]);
+                    _this.$strokeRect(context2D, arr[1], arr[2], arr[3]);
                 }
                 else if (type == "circle") {
-                    _this.$circle(arr[1], arr[2], arr[3], arr[4]);
+                    _this.$circle(context2D, arr[1], arr[2], arr[3], arr[4]);
                 }
                 else { }
             });
-            eg.context.restore();
+            context2D.restore();
         };
         Shape.prototype.$measureContentBounds = function () {
             return eg.$tempRect.setTo(-this.anchorOffsetX * this.scaleX, -this.anchorOffsetY * this.scaleY, this.width * this.scaleX, this.height * this.scaleY);
@@ -822,10 +920,25 @@ var game;
             var _this = _super.call(this) || this;
             eg.setStageWidth(600);
             eg.setStageHeight(400);
+            var c = new eg.DisplayObjectContainer();
+            var o1 = new Layer();
+            var o2 = new Layer();
+            o1.container.y -= 100;
+            c.addChild(o1.container);
+            o2.container.y += 100;
+            c.addChild(o2.container);
+            return _this;
+        }
+        return Main;
+    }(Decorate));
+    var Layer = (function (_super) {
+        __extends(Layer, _super);
+        function Layer() {
+            var _this = _super.call(this) || this;
             _this.decorate();
             return _this;
         }
-        Main.prototype.createContainer = function () {
+        Layer.prototype.createContainer = function () {
             var _this = this;
             this.container = new eg.DisplayObjectContainer();
             this.container.x = eg.stage.width / 2;
@@ -835,8 +948,15 @@ var game;
                 _this.container.rotation += 0.5;
             });
             eg.moveLeftRight(this.container, 200, 400);
+            this.container.cacheAsBitmap = false;
+            document.getElementById('fps').style.color = "#3399ee";
+            setTimeout(function () {
+                // 可看到页面中fps中的渲染对象数量变少了
+                _this.container.cacheAsBitmap = true;
+                document.getElementById('fps').style.color = "#ff0000";
+            }, 2000);
         };
-        Main.prototype.createRect = function () {
+        Layer.prototype.createRect = function () {
             this.shape = new eg.Shape();
             this.shape.fillRect("#3366CC", 100, 100);
             this.shape.strokeRect("#FF6600", 100, 100);
@@ -845,7 +965,7 @@ var game;
             this.shape.anchorOffsetY = 100 / 2;
             this.container.addChild(this.shape);
         };
-        Main.prototype.createGo = function () {
+        Layer.prototype.createGo = function () {
             var _this = this;
             this.go = new eg.Bitmap("assets/go.png");
             this.go.anchorOffsetX = this.go.width / 2;
@@ -859,24 +979,24 @@ var game;
             }, this);
         };
         // 视图渲染，监听countModel的数据变化, 实现数据与视图分离
-        Main.prototype.display = function () {
+        Layer.prototype.display = function () {
             var count = document.getElementById('count');
             count.innerHTML = countModel.getCount() + "";
             this.shape.updateColor();
         };
         __decorate([
             game.start
-        ], Main.prototype, "createContainer", null);
+        ], Layer.prototype, "createContainer", null);
         __decorate([
             game.start
-        ], Main.prototype, "createRect", null);
+        ], Layer.prototype, "createRect", null);
         __decorate([
             game.start
-        ], Main.prototype, "createGo", null);
+        ], Layer.prototype, "createGo", null);
         __decorate([
             game.update(countModel)
-        ], Main.prototype, "display", null);
-        return Main;
+        ], Layer.prototype, "display", null);
+        return Layer;
     }(Decorate));
 })(game || (game = {}));
 //# sourceMappingURL=game.js.map

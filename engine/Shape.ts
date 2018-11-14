@@ -30,7 +30,7 @@ module eg {
             this.data.push(["circle", color, x, y, radius]);
         }
 
-        private $fillRect(color: string, w: number, h: number) {
+        private $fillRect(context, color: string, w: number, h: number) {
             context.save();
             if (this.testColor) {
                 let arr = this.testColor;
@@ -44,7 +44,7 @@ module eg {
             this.height = h;
         }
 
-        private $strokeRect(color: string, w: number, h: number) {
+        private $strokeRect(context, color: string, w: number, h: number) {
             context.save();
             context.strokeStyle = color;
             context.strokeRect(0, 0, w, h);
@@ -53,7 +53,7 @@ module eg {
             this.height = h;
         }
 
-        private $circle(color: string, cx: number, cy: number, radius: number) {
+        private $circle(context, color: string, cx: number, cy: number, radius: number) {
             context.save();
             context.beginPath();
             context.strokeStyle = color;
@@ -64,20 +64,20 @@ module eg {
         }
 
         @override
-        public render() {
-            context.save();
-            context.transform(1, 0, 0, 1, -this.anchorOffsetX, -this.anchorOffsetY);
+        public render(context2D: CanvasRenderingContext2D) {
+            context2D.save();
+            context2D.transform(1, 0, 0, 1, -this.anchorOffsetX, -this.anchorOffsetY);
             this.data.forEach((arr: any[]) => {
                 let type = arr[0];
                 if (type == "fill") {
-                    this.$fillRect(arr[1], arr[2], arr[3]);
+                    this.$fillRect(context2D, arr[1], arr[2], arr[3]);
                 } else if (type == "stroke") {
-                    this.$strokeRect(arr[1], arr[2], arr[3]);
+                    this.$strokeRect(context2D, arr[1], arr[2], arr[3]);
                 } else if (type == "circle") {
-                    this.$circle(arr[1], arr[2], arr[3], arr[4]);
+                    this.$circle(context2D, arr[1], arr[2], arr[3], arr[4]);
                 } else { }
             });
-            context.restore();
+            context2D.restore();
         }
 
         @override

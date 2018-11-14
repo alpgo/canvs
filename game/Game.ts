@@ -89,10 +89,26 @@ module game {
             super();
             eg.setStageWidth(600);
             eg.setStageHeight(400);
+
+            var c = new eg.DisplayObjectContainer();
+            var o1 = new Layer();
+            var o2 = new Layer();
+            o1.container.y -= 100;
+            c.addChild(o1.container);
+
+            o2.container.y += 100;
+            c.addChild(o2.container);
+        }
+    }
+
+    class Layer extends Decorate {
+
+        constructor() {
+            super();
             this.decorate();
         }
 
-        private container: eg.DisplayObjectContainer;
+        public container: eg.DisplayObjectContainer;
         @start
         public createContainer() {
             this.container = new eg.DisplayObjectContainer();
@@ -103,6 +119,13 @@ module game {
                 this.container.rotation += 0.5;
             });
             eg.moveLeftRight(this.container, 200, 400);
+            this.container.cacheAsBitmap = false;
+            document.getElementById('fps').style.color = "#3399ee";
+            setTimeout(() => {
+                // 可看到页面中fps中的渲染对象数量变少了
+                this.container.cacheAsBitmap = true;
+                document.getElementById('fps').style.color = "#ff0000";
+            }, 2000);
         }
 
         private shape: eg.Shape;

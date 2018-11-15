@@ -101,9 +101,9 @@ C = [   0     scaleY    0 ]
     node1.scaleY = -node2.scaleY; node1.skewX = node2.skewX+PI;
 ```
 总结： 
-* Matrix = F(Node) 是单值函数;  一个node对应唯一的Matrix
-* Node = G(Matrix) 是多值函数;  一个Matrix对应两个Node
-* 关于M1=M2,及矩阵分解成基本变换的组合,得出存在两种等价的却不同的变换方法路径,参考代码:
+* a. Matrix = F(Node) 是单值函数;  一个node对应唯一的Matrix
+* b. Node = G(Matrix) 是多值函数;  一个Matrix对应两个Node
+* c. 关于M1=M2,及矩阵分解成基本变换的组合,得出存在两种等价的却不同的变换方法路径,参考代码: [测试代码示例](test/testMatrix.html)
 ```
 (M1) M1 = A1 * B1 * C1
     第一步：平移 context.transform(1,0,0,1,x,y)

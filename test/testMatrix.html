@@ -1,0 +1,46 @@
+<html>
+<style>
+    #canvas {
+        border: thin inset #aaaaaa;
+    }
+</style>
+
+<body>
+    <canvas id='canvas' width="600" height="400"></canvas>
+</body>
+<script>
+    var canvas = document.getElementById('canvas')
+    var context = canvas.getContext('2d');
+    var tx = 200;
+    var ty = 200;
+    var skewX = 30;
+    var skewY = 120;
+    var scaleX = 0.8;
+    var scaleY = 2;
+    var PI = Math.PI;
+
+    var step = 100;
+    var loop = setInterval(function () {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.save();
+        context.transform(1, 0, 0, 1, tx, ty);
+        context.transform(Math.cos(skewY), Math.sin(skewY), -Math.sin(skewX), Math.cos(skewX), 0, 0);
+        context.transform(scaleX, 0, 0, scaleY, 0, 0);
+        context.strokeRect(0, 0, 100, 50);
+        context.restore();
+
+        context.save();
+        context.transform(1, 0, 0, 1, tx + step, ty + step);
+        context.transform(Math.cos(skewY + PI), Math.sin(skewY + PI), -Math.sin(skewX + PI), Math.cos(skewX + PI), 0, 0);
+        context.transform(-scaleX, 0, 0, -scaleY, 0, 0);
+        context.strokeRect(0, 0, 100, 50);
+        context.restore();
+
+        step = step - 1;
+        if (step <= 0) {
+            clearInterval(loop);
+        }
+    }, 50);
+</script>
+
+</html>

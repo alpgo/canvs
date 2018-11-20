@@ -15,24 +15,38 @@
     var ty = 150;
     var skewX = 20;
     var skewY = 30;
+    var rotation = true ? 30 : 0;
+    if (rotation) {
+        skewX = skewY = rotation;
+    }
     var scaleX = 0.7;
     var scaleY = 1.2;
     var PI = Math.PI;
     var width = 100;    // 矩形宽
-    var height = 100;    // 矩形高
+    var height = 100;   // 矩形高
 
-    var step = 80;
-    var delta = -step;
+    var dx = 80;
+    var dy = dx;
     var loop = setInterval(function () {
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.textAlign = 'center';
         context.textBaseline = 'middle';
         context.font = "bold 20px sans-serif";
+        // 基本组合 
+        context.save();
+        context.translate(tx, ty);
+        context.rotate(rotation);
+        context.scale(scaleX, scaleY);
+        context.strokeRect(0, 0, width, height);
+        context.fillStyle = "#FF0000";
+        context.fillText('基本组合', width / 2, height / 2);
+        context.restore();
+
         // 复合变换 M 
         context.save();
         context.transform(scaleX * Math.cos(skewY), scaleX * Math.sin(skewY),
             -scaleY * Math.sin(skewX), scaleY * Math.cos(skewX),
-            tx + delta, ty + delta);
+            tx + dx, ty + dy);
         context.strokeRect(0, 0, width, height);
         context.fillStyle = "#FF0000";
         context.fillText('复合', width / 2, height / 2);
@@ -40,7 +54,7 @@
 
         // 基本变换组合一 M = A1 * B1 * C1
         context.save();
-        context.transform(1, 0, 0, 1, tx, ty);
+        context.transform(1, 0, 0, 1, tx - dx, ty - dy);
         context.transform(Math.cos(skewY), Math.sin(skewY), -Math.sin(skewX), Math.cos(skewX), 0, 0);
         context.transform(scaleX, 0, 0, scaleY, 0, 0);
         context.strokeRect(0, 0, width, height);
@@ -50,7 +64,7 @@
 
         // 基本变换组合二 M = A2 * B2 * C2
         context.save();
-        context.transform(1, 0, 0, 1, tx + step, ty + step);
+        context.transform(1, 0, 0, 1, tx + dx, ty - dy);
         context.transform(Math.cos(skewY + PI), Math.sin(skewY + PI), -Math.sin(skewX + PI), Math.cos(skewX + PI), 0, 0);
         context.transform(-scaleX, 0, 0, -scaleY, 0, 0);
         context.strokeRect(0, 0, width, height);
@@ -58,9 +72,9 @@
         context.fillText('组合2', width / 2, height / 2);
         context.restore();
 
-        step = step - 1;
-        delta = delta + 1;
-        if (step <= 0) {
+        dx -= 1;
+        dy -= 1;
+        if (dx <= 0) {
             clearInterval(loop);
         }
     }, 50);

@@ -90,7 +90,7 @@ C = [   0     scaleY    0 ]
          [        0                      0               1 ]
 
          [ -scaleX * cos(skewY+PI)   scaleY * sin(skewX+PI)    x ]
-    M2 = [ -scaleX * sin(skewY+PI)   scaleY * cos(skewX+PI)    y ]
+    M2 = [ -scaleX * sin(skewY+PI)  -scaleY * cos(skewX+PI)    y ]
          [        0                         0                  1 ]
 
     M1 = M2 (可验证而得)
